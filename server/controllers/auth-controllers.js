@@ -8,28 +8,36 @@ export async function signup (req, res) {
     const { name, email, password } = req.body
 
     if (!name) {
-      return res.status(400).json({ message: 'Name is required' })
+      return res
+        .status(400)
+        .json({ success: false, message: 'Name is required' })
     }
     if (!email) {
-      return res.status(400).json({ message: 'Email is required' })
+      return res
+        .status(400)
+        .json({ success: false, message: 'Email is required' })
     }
     if (!password) {
-      return res.status(400).json({ message: 'Password is required' })
+      return res
+        .status(400)
+        .json({ success: false, message: 'Password is required' })
     }
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already in use' })
+      return res
+        .status(409)
+        .json({ success: false, message: 'Email already in use' })
     }
 
     const hashedPassword = await argon2.hash(password)
     const user = await User.create({ name, email, password: hashedPassword })
 
     logger.info(`${user.name} signed up`, { userId: user._id })
-    res.status(201).json({ message: 'Signup successful' })
+    res.status(201).json({ success: true, message: 'Signup successful' })
   } catch (err) {
     logger.error('Signup failed', { error: err.message })
-    res.status(500).json({ message: 'Something went wrong' })
+    res.status(500).json({ success: false, message: 'Something went wrong' })
   }
 }
 
@@ -38,20 +46,28 @@ export async function login (req, res) {
     const { email, password } = req.body
 
     if (!email) {
-      return res.status(400).json({ message: 'Email is required' })
+      return res
+        .status(400)
+        .json({ success: false, message: 'Email is required' })
     }
     if (!password) {
-      return res.status(400).json({ message: 'Password is required' })
+      return res
+        .status(400)
+        .json({ success: false, message: 'Password is required' })
     }
 
     const user = await User.findOne({ email })
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res
+        .status(401)
+        .json({ success: false, message: 'Invalid credentials' })
     }
 
     const isValid = await argon2.verify(user.password, password)
     if (!isValid) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res
+        .status(401)
+        .json({ success: false, message: 'Invalid credentials' })
     }
 
     const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
@@ -61,6 +77,7 @@ export async function login (req, res) {
     logger.info(`${user.name} logged in`, { userId: user._id })
 
     res.json({
+      success: true,
       accessToken,
       user: {
         id: user._id,
@@ -70,6 +87,6 @@ export async function login (req, res) {
     })
   } catch (err) {
     logger.error('Login failed', { error: err.message })
-    res.status(500).json({ message: 'Something went wrong' })
+    res.status(500).json({ success: false, message: 'Something went wrong' })
   }
 }

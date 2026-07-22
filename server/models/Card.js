@@ -1,0 +1,15 @@
+import mongoose from 'mongoose'
+
+const cardSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: '' },
+    list: { type: mongoose.Schema.Types.ObjectId, ref: 'List', required: true },
+    position: { type: Number, required: true },
+    dueDate: { type: Date, default: null },
+    labels: [{ type: String }]
+  },
+  { timestamps: true }
+)
+
+export default mongoose.model('Card', cardSchema)
