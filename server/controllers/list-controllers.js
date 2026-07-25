@@ -14,7 +14,7 @@ export async function getLists (req, res) {
 
 export async function createList (req, res) {
   try {
-    const { title } = req.body
+    const { title, status } = req.body
     if (!title) {
       return res
         .status(400)
@@ -22,13 +22,19 @@ export async function createList (req, res) {
     }
 
     const count = await List.countDocuments()
-    const list = await List.create({ title, position: count })
+    const list = await List.create({
+      title,
+      position: count,
+      status: status || 'todo'
+    })
 
     logger.info(`List created: ${list.title}`, {
       listId: list._id,
       userId: req.userId
     })
-    res.status(201).json({ success: true, list })
+    res
+      .status(201)
+      .json({ success: true, message: 'List created successfully', list })
   } catch (err) {
     logger.error('Create list failed', { error: err.message })
     res.status(500).json({ success: false, message: 'Something went wrong' })
@@ -38,7 +44,7 @@ export async function createList (req, res) {
 export async function updateList (req, res) {
   try {
     const { id } = req.params
-    const { title, position } = req.body
+    const { title, position, status } = req.body
 
     const list = await List.findById(id)
     if (!list) {
@@ -47,10 +53,13 @@ export async function updateList (req, res) {
 
     if (title !== undefined) list.title = title
     if (position !== undefined) list.position = position
+    if (status !== undefined) list.status = status
     await list.save()
 
     logger.info(`List updated: ${list._id}`, { userId: req.userId })
-    res.status(200).json({ success: true, list })
+    res
+      .status(200)
+      .json({ success: true, message: 'List updated successfully', list })
   } catch (err) {
     logger.error('Update list failed', { error: err.message })
     res.status(500).json({ success: false, message: 'Something went wrong' })
