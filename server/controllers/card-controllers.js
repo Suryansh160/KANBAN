@@ -1,4 +1,5 @@
 import Card from '../models/Card.js'
+import User from '../models/User.js'
 import List from '../models/List.js'
 import logger from '../logger.js'
 
@@ -16,7 +17,7 @@ export async function getCards (req, res) {
 
 export async function createCard (req, res) {
   try {
-    const { title, list } = req.body
+    const { title, list, description, dueDate, labels } = req.body
     if (!title) {
       return res
         .status(400)
@@ -33,8 +34,18 @@ export async function createCard (req, res) {
       return res.status(404).json({ success: false, message: 'List not found' })
     }
 
+    const user = await User.findById(req.userId)
+
     const count = await Card.countDocuments({ list })
-    const card = await Card.create({ title, list, position: count })
+    const card = await Card.create({
+      title,
+      list,
+      description: description || '',
+      dueDate: dueDate || null,
+      labels: labels || [],
+      assignee: user?.name || '',
+      position: count
+    })
 
     logger.info(`Card created: ${card.title}`, {
       cardId: card._id,

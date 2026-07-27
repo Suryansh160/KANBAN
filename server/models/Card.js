@@ -7,7 +7,8 @@ const cardSchema = new mongoose.Schema(
     list: { type: mongoose.Schema.Types.ObjectId, ref: 'List', required: true },
     position: { type: Number, required: true },
     dueDate: { type: Date, default: null },
-    labels: [{ type: String }]
+    labels: [{ type: String }],
+    assignee: { type: String, default: '' }
   },
   { timestamps: true }
 )
