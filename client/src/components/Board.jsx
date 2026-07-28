@@ -5,10 +5,19 @@ import LogsPanel from './LogsPanel'
 import OnlineUsers from './OnlineUsers'
 import AddListDialog from './AddListDialog'
 import AddCardDialog from './AddCardDialog'
+import EditCardDialog from './EditCardDialog'
+import KanbanCard from './KanbanCard'
 import { Plus } from 'lucide-react'
 import { useLists, useCreateList } from '../hooks/useLists'
 import { useCards, useCreateCard, useUpdateCard } from '../hooks/useCards'
-import EditCardDialog from './EditCardDialog'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners
+} from '@dnd-kit/core'
 
 export default function Board () {
   const {
@@ -24,19 +33,18 @@ export default function Board () {
 
   const createList = useCreateList()
   const createCard = useCreateCard()
+  const updateCard = useUpdateCard()
 
   const [listDialogOpen, setListDialogOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)
-  const [activeListId, setActiveListId] = useState(null)
-
-  const updateCard = useUpdateCard()
   const [editCardDialogOpen, setEditCardDialogOpen] = useState(false)
+  const [activeListId, setActiveListId] = useState(null)
   const [editingCard, setEditingCard] = useState(null)
+  const [activeCard, setActiveCard] = useState(null)
 
-  const handleEditCard = card => {
-    setEditingCard(card)
-    setEditCardDialogOpen(true)
-  }
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
 
   const handleAddCardClick = listId => {
     setActiveListId(listId)
@@ -45,6 +53,58 @@ export default function Board () {
 
   const handleCreateCard = data => {
     createCard.mutate({ ...data, list: activeListId })
+  }
+
+  const handleEditCard = card => {
+    setEditingCard(card)
+    setEditCardDialogOpen(true)
+  }
+
+  const lists = listsData?.lists ?? []
+  const cards = cardsData?.cards ?? []
+
+  const handleDragStart = event => {
+    const card = cards.find(c => c._id === event.active.id)
+    setActiveCard(card || null)
+  }
+
+  const handleDragEnd = event => {
+    const { active, over } = event
+    setActiveCard(null)
+    if (!over) return
+
+    const activeCard = cards.find(c => c._id === active.id)
+    if (!activeCard) return
+
+    // Dropped over a card -> take that card's list, dropped over empty list area -> over.id is the list id
+    const overType = over.data.current?.type
+    const targetListId =
+      overType === 'card' ? over.data.current.card.list : over.id
+
+    if (!targetListId) return
+
+    const targetListCards = cards
+      .filter(c => c.list === targetListId && c._id !== activeCard._id)
+      .sort((a, b) => a.position - b.position)
+
+    let newPosition
+
+    if (overType === 'card' && over.id !== active.id) {
+      const overCard = over.data.current.card
+      const overIndex = targetListCards.findIndex(c => c._id === overCard._id)
+      newPosition = overIndex >= 0 ? overIndex : targetListCards.length
+    } else {
+      newPosition = targetListCards.length
+    }
+
+    // no-op if nothing actually changed
+    if (activeCard.list === targetListId && activeCard.position === newPosition)
+      return
+
+    updateCard.mutate({
+      id: activeCard._id,
+      data: { list: targetListId, position: newPosition }
+    })
   }
 
   if (listsLoading || cardsLoading) {
@@ -62,9 +122,6 @@ export default function Board () {
       </div>
     )
   }
-
-  const lists = listsData?.lists ?? []
-  const cards = cardsData?.cards ?? []
 
   return (
     <div className='min-h-screen bg-zinc-950 pb-12'>
@@ -85,19 +142,34 @@ export default function Board () {
         </button>
       </div>
 
-      <div className='flex gap-4 p-6 overflow-x-auto'>
-        {lists.map(list => (
-          <List
-            key={list._id}
-            list={{
-              ...list,
-              cards: cards.filter(card => card.list === list._id)
-            }}
-            onAddCard={handleAddCardClick}
-            onEditCard={handleEditCard}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className='flex gap-4 p-6 overflow-x-auto'>
+          {lists.map(list => (
+            <List
+              key={list._id}
+              list={{
+                ...list,
+                cards: cards
+                  .filter(card => card.list === list._id)
+                  .sort((a, b) => a.position - b.position)
+              }}
+              onAddCard={handleAddCardClick}
+              onEditCard={handleEditCard}
+            />
+          ))}
+        </div>
+
+        <DragOverlay>
+          {activeCard ? (
+            <KanbanCard card={activeCard} onEdit={() => {}} />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <LogsPanel />
 

@@ -2,6 +2,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import KanbanCard from './KanbanCard'
 import { Plus, Trash2 } from 'lucide-react'
 import { useDeleteList } from '../hooks/useLists'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 
 const statusColors = {
   todo: 'bg-zinc-400',
@@ -13,6 +15,11 @@ const statusColors = {
 export default function List ({ list, onAddCard, onEditCard }) {
   const deleteList = useDeleteList()
 
+  const { setNodeRef } = useDroppable({
+    id: list._id,
+    data: { type: 'list', listId: list._id }
+  })
+
   const handleDelete = () => {
     const confirmed = window.confirm(
       `Delete "${list.title}" and all its cards?`
@@ -20,6 +27,8 @@ export default function List ({ list, onAddCard, onEditCard }) {
     if (!confirmed) return
     deleteList.mutate(list._id)
   }
+
+  const cardIds = list.cards.map(c => c._id)
 
   return (
     <Card className='w-72 shrink-0 bg-zinc-900 border-zinc-800 flex flex-col'>
@@ -41,11 +50,18 @@ export default function List ({ list, onAddCard, onEditCard }) {
             <Trash2 size={14} />
           </button>
         </div>
-        <div className='flex-1 overflow-y-auto'>
-          {list.cards.map(card => (
-            <KanbanCard key={card._id} onEdit={onEditCard} card={card} />
-          ))}
+
+        <div ref={setNodeRef} className='flex-1 overflow-y-auto min-h-[40px]'>
+          <SortableContext
+            items={cardIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {list.cards.map(card => (
+              <KanbanCard key={card._id} card={card} onEdit={onEditCard} />
+            ))}
+          </SortableContext>
         </div>
+
         <button
           onClick={() => onAddCard(list._id)}
           className='flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded px-2 py-1.5 mt-1 transition-colors'
