@@ -1,6 +1,11 @@
 import List from '../models/List.js'
 import Card from '../models/Card.js'
 import logger from '../logger.js'
+import {
+  emitListCreated,
+  emitListUpdated,
+  emitListDeleted
+} from '../socket/board.js'
 
 export async function getLists (req, res) {
   try {
@@ -32,6 +37,10 @@ export async function createList (req, res) {
       listId: list._id,
       userId: req.userId
     })
+
+    const io = req.app.get('io')
+    emitListCreated(io, list)
+
     res
       .status(201)
       .json({ success: true, message: 'List created successfully', list })
@@ -57,6 +66,10 @@ export async function updateList (req, res) {
     await list.save()
 
     logger.info(`List updated: ${list._id}`, { userId: req.userId })
+
+    const io = req.app.get('io')
+    emitListUpdated(io, list)
+
     res
       .status(200)
       .json({ success: true, message: 'List updated successfully', list })
@@ -79,7 +92,13 @@ export async function deleteList (req, res) {
     await list.deleteOne()
 
     logger.info(`List deleted: ${id}`, { userId: req.userId })
-    res.status(200).json({ success: true, message: 'List deleted' })
+
+    const io = req.app.get('io')
+    emitListDeleted(io, id)
+
+    res
+      .status(200)
+      .json({ success: true, message: 'List deleted successfully' })
   } catch (err) {
     logger.error('Delete list failed', { error: err.message })
     res.status(500).json({ success: false, message: 'Something went wrong' })

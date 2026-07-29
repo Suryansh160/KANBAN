@@ -1,7 +1,12 @@
 import Card from '../models/Card.js'
-import User from '../models/User.js'
 import List from '../models/List.js'
+import User from '../models/User.js'
 import logger from '../logger.js'
+import {
+  emitCardCreated,
+  emitCardUpdated,
+  emitCardDeleted
+} from '../socket/board.js'
 
 export async function getCards (req, res) {
   try {
@@ -51,6 +56,10 @@ export async function createCard (req, res) {
       cardId: card._id,
       userId: req.userId
     })
+
+    const io = req.app.get('io')
+    emitCardCreated(io, card)
+
     res
       .status(201)
       .json({ success: true, message: 'Card created successfully', card })
@@ -80,6 +89,10 @@ export async function updateCard (req, res) {
     await card.save()
 
     logger.info(`Card updated: ${card._id}`, { userId: req.userId })
+
+    const io = req.app.get('io')
+    emitCardUpdated(io, card)
+
     res
       .status(200)
       .json({ success: true, message: 'Card updated successfully', card })
@@ -101,6 +114,10 @@ export async function deleteCard (req, res) {
     await card.deleteOne()
 
     logger.info(`Card deleted: ${id}`, { userId: req.userId })
+
+    const io = req.app.get('io')
+    emitCardDeleted(io, id)
+
     res
       .status(200)
       .json({ success: true, message: 'Card deleted successfully' })

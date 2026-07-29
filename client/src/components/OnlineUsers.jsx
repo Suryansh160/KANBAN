@@ -1,39 +1,36 @@
+import { useEffect, useState } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-
-const dummyUsers = [
-  {
-    id: 1,
-    name: 'Alex Johnson',
-    email: 'alex.johnson@example.com',
-    online: true
-  },
-  { id: 2, name: 'Jamie Lee', email: 'jamie.lee@example.com', online: true },
-  {
-    id: 3,
-    name: 'Morgan Smith',
-    email: 'morgan.smith@example.com',
-    online: false
-  },
-  {
-    id: 4,
-    name: 'Taylor Nguyen',
-    email: 'taylor.nguyen@example.com',
-    online: true
-  }
-]
+import { socket } from '@/lib/socket'
 
 export default function OnlineUsers () {
+  const [users, setUsers] = useState([])
+
+  useEffect(() => {
+    const updatePresence = users => setUsers(users)
+    const requestPresence = () => socket.emit('presence:request')
+
+    socket.on('presence:update', updatePresence)
+    socket.on('connect', requestPresence)
+
+    if (socket.connected) requestPresence()
+
+    return () => {
+      socket.off('presence:update', updatePresence)
+      socket.off('connect', requestPresence)
+    }
+  }, [])
+
   return (
     <div>
       <div className='flex flex-wrap items-stretch gap-4 px-6 py-4'>
-        {dummyUsers.map((user, index) => {
+        {users.map((user, index) => {
           const initials = user.name
             .split(' ')
             .map(n => n[0])
             .join('')
           return (
-            <div key={user.id} className='flex items-center gap-4'>
+            <div key={user.userId} className='flex items-center gap-4'>
               <div className='flex items-center gap-2'>
                 <div className='relative'>
                   <Avatar className='h-8 w-8'>
@@ -42,9 +39,7 @@ export default function OnlineUsers () {
                     </AvatarFallback>
                   </Avatar>
                   <span
-                    className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-zinc-950 ${
-                      user.online ? 'bg-emerald-400' : 'bg-zinc-600'
-                    }`}
+                    className='absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-zinc-950 bg-emerald-400'
                   />
                 </div>
                 <div className='leading-tight'>
@@ -52,7 +47,7 @@ export default function OnlineUsers () {
                   <p className='text-xs text-zinc-500'>{user.email}</p>
                 </div>
               </div>
-              {index < dummyUsers.length - 1 && (
+              {index < users.length - 1 && (
                 <Separator orientation='vertical' className='bg-zinc-800' />
               )}
             </div>

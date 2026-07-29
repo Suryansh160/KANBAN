@@ -10,6 +10,7 @@ import KanbanCard from './KanbanCard'
 import { Plus } from 'lucide-react'
 import { useLists, useCreateList } from '../hooks/useLists'
 import { useCards, useCreateCard, useUpdateCard } from '../hooks/useCards'
+import { useSocket } from '../hooks/useSocket'
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +21,8 @@ import {
 } from '@dnd-kit/core'
 
 export default function Board () {
+  useSocket()
+
   const {
     data: listsData,
     isLoading: listsLoading,

@@ -61,7 +61,6 @@ function LoginForm ({ onSuccess }) {
     try {
       const res = await login({ email, password })
       localStorage.setItem('accessToken', res.accessToken)
-      localStorage.removeItem('token')
       onSuccess()
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')

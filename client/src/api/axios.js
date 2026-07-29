@@ -6,7 +6,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+  const token = localStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = token.startsWith('Bearer ')
       ? token
@@ -20,7 +20,6 @@ api.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken')
-      localStorage.removeItem('token')
       triggerAuthRequired()
     }
     return Promise.reject(error)
