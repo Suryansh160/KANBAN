@@ -9,6 +9,7 @@ import cardRoutes from './routes/card-routes.js'
 import http from 'http'
 import { Server } from 'socket.io'
 import { initSocket } from './socket/index.js'
+import activityRoutes from './routes/activity-routes.js'
 
 dotenv.config()
 
@@ -34,6 +35,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/lists', listRoutes)
 app.use('/api/cards', cardRoutes)
+app.use('/api/activity', activityRoutes)
 
 const PORT = process.env.PORT || 4000
 

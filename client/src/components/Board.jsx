@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import List from './List'
 import ChatSheet from './ChatSheet'
 import LogsPanel from './LogsPanel'
@@ -19,6 +19,8 @@ import {
   useSensors,
   closestCorners
 } from '@dnd-kit/core'
+import { getActivity } from '../api/activity'
+import { useActivityStore } from '../store/activityStore'
 
 export default function Board () {
   useSocket()
@@ -37,6 +39,7 @@ export default function Board () {
   const createList = useCreateList()
   const createCard = useCreateCard()
   const updateCard = useUpdateCard()
+  const setLogs = useActivityStore(s => s.setLogs)
 
   const [listDialogOpen, setListDialogOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)
@@ -53,6 +56,12 @@ export default function Board () {
     setActiveListId(listId)
     setCardDialogOpen(true)
   }
+
+  useEffect(() => {
+    getActivity()
+      .then(res => setLogs(res.activities))
+      .catch(() => setLogs([]))
+  }, [setLogs])
 
   const handleCreateCard = data => {
     createCard.mutate({ ...data, list: activeListId })

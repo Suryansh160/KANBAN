@@ -2,12 +2,14 @@ import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { socket } from '../lib/socket'
 import { useChatStore } from '../store/chatStore'
+import { useActivityStore } from '../store/activityStore'
 
 export function useSocket () {
   const queryClient = useQueryClient()
   const addMessage = useChatStore(s => s.addMessage)
   const incrementUnread = useChatStore(s => s.incrementUnread)
   const setTyping = useChatStore(s => s.setTyping)
+  const addLog = useActivityStore(s => s.addLog)
 
   useEffect(() => {
     const onCardCreated = card => {
@@ -76,6 +78,10 @@ export function useSocket () {
       setTyping(userId, name, isTyping)
     }
 
+    const onActivityNew = activity => {
+      addLog(activity)
+    }
+
     socket.on('card:created', onCardCreated)
     socket.on('card:updated', onCardUpdated)
     socket.on('card:deleted', onCardDeleted)
@@ -84,6 +90,7 @@ export function useSocket () {
     socket.on('list:deleted', onListDeleted)
     socket.on('chat:message', onChatMessage)
     socket.on('chat:typing', onChatTyping)
+    socket.on('activity:new', onActivityNew)
 
     return () => {
       socket.off('card:created', onCardCreated)
@@ -94,6 +101,7 @@ export function useSocket () {
       socket.off('list:deleted', onListDeleted)
       socket.off('chat:message', onChatMessage)
       socket.off('chat:typing', onChatTyping)
+      socket.off('activity:new', onActivityNew)
     }
   }, [queryClient, addMessage, incrementUnread, setTyping])
 }

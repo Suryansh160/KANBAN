@@ -1,11 +1,13 @@
 import List from '../models/List.js'
 import Card from '../models/Card.js'
+import User from '../models/User.js'
 import logger from '../logger.js'
 import {
   emitListCreated,
   emitListUpdated,
   emitListDeleted
 } from '../socket/board.js'
+import { logActivity } from '../socket/activity.js'
 
 export async function getLists (req, res) {
   try {
@@ -41,6 +43,15 @@ export async function createList (req, res) {
     const io = req.app.get('io')
     emitListCreated(io, list)
 
+    const user = await User.findById(req.userId)
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'list_created',
+      message: `${user?.name || 'Someone'} created list "${list.title}"`,
+      meta: { listId: list._id }
+    })
+
     res
       .status(201)
       .json({ success: true, message: 'List created successfully', list })
@@ -70,6 +81,15 @@ export async function updateList (req, res) {
     const io = req.app.get('io')
     emitListUpdated(io, list)
 
+    const user = await User.findById(req.userId)
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'list_updated',
+      message: `${user?.name || 'Someone'} updated list "${list.title}"`,
+      meta: { listId: list._id }
+    })
+
     res
       .status(200)
       .json({ success: true, message: 'List updated successfully', list })
@@ -95,6 +115,15 @@ export async function deleteList (req, res) {
 
     const io = req.app.get('io')
     emitListDeleted(io, id)
+
+    const user = await User.findById(req.userId)
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'list_deleted',
+      message: `${user?.name || 'Someone'} deleted list "${list.title}"`,
+      meta: { listId: id }
+    })
 
     res
       .status(200)

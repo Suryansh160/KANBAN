@@ -7,6 +7,7 @@ import {
   emitCardUpdated,
   emitCardDeleted
 } from '../socket/board.js'
+import { logActivity } from '../socket/activity.js'
 
 export async function getCards (req, res) {
   try {
@@ -60,6 +61,14 @@ export async function createCard (req, res) {
     const io = req.app.get('io')
     emitCardCreated(io, card)
 
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'card_created',
+      message: `${user?.name || 'Someone'} created card "${card.title}"`,
+      meta: { cardId: card._id, listId: card.list }
+    })
+
     res
       .status(201)
       .json({ success: true, message: 'Card created successfully', card })
@@ -93,6 +102,15 @@ export async function updateCard (req, res) {
     const io = req.app.get('io')
     emitCardUpdated(io, card)
 
+    const user = await User.findById(req.userId)
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'card_updated',
+      message: `${user?.name || 'Someone'} updated card "${card.title}"`,
+      meta: { cardId: card._id }
+    })
+
     res
       .status(200)
       .json({ success: true, message: 'Card updated successfully', card })
@@ -117,6 +135,15 @@ export async function deleteCard (req, res) {
 
     const io = req.app.get('io')
     emitCardDeleted(io, id)
+
+    const user = await User.findById(req.userId)
+    await logActivity(io, {
+      userId: req.userId,
+      userName: user?.name || 'Someone',
+      action: 'card_deleted',
+      message: `${user?.name || 'Someone'} deleted card "${card.title}"`,
+      meta: { cardId: id }
+    })
 
     res
       .status(200)
