@@ -14,17 +14,23 @@ import activityRoutes from './routes/activity-routes.js'
 dotenv.config()
 
 const app = express()
-app.use(cors())
 app.use(express.json())
 
 const httpServer = http.createServer(app)
 
 const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true
   }
 })
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+  })
+)
 
 app.set('io', io)
 
