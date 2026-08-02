@@ -1,6 +1,7 @@
+import { useState, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import KanbanCard from './KanbanCard'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Check, X } from 'lucide-react'
 import { useDeleteList } from '../hooks/useLists'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -14,18 +15,30 @@ const statusColors = {
 
 export default function List ({ list, onAddCard, onEditCard }) {
   const deleteList = useDeleteList()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const revertTimeoutRef = useRef(null)
 
   const { setNodeRef } = useDroppable({
     id: list._id,
     data: { type: 'list', listId: list._id }
   })
 
-  const handleDelete = () => {
-    const confirmed = window.confirm(
-      `Delete "${list.title}" and all its cards?`
-    )
-    if (!confirmed) return
+  const handleDeleteClick = () => {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true)
+      revertTimeoutRef.current = setTimeout(
+        () => setConfirmingDelete(false),
+        3000
+      )
+      return
+    }
+    clearTimeout(revertTimeoutRef.current)
     deleteList.mutate(list._id)
+  }
+
+  const handleCancelDelete = () => {
+    clearTimeout(revertTimeoutRef.current)
+    setConfirmingDelete(false)
   }
 
   const cardIds = list.cards.map(c => c._id)
@@ -38,17 +51,41 @@ export default function List ({ list, onAddCard, onEditCard }) {
             <span
               className={`h-2 w-2 rounded-full ${statusColors[list.status]}`}
             />
-            <h3 className='text-sm font-semibold text-zinc-200'>
-              {list.title}
-            </h3>
+            {confirmingDelete ? (
+              <span className='text-sm font-semibold text-red-400'>
+                Delete list + all cards?
+              </span>
+            ) : (
+              <h3 className='text-sm font-semibold text-zinc-200'>
+                {list.title}
+              </h3>
+            )}
           </div>
-          <button
-            onClick={handleDelete}
-            disabled={deleteList.isPending}
-            className='p-1 rounded hover:bg-zinc-800 text-red-400 disabled:opacity-50'
-          >
-            <Trash2 size={14} />
-          </button>
+
+          {confirmingDelete ? (
+            <div className='flex gap-1'>
+              <button
+                onClick={handleDeleteClick}
+                disabled={deleteList.isPending}
+                className='p-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 disabled:opacity-50'
+              >
+                <Check size={14} />
+              </button>
+              <button
+                onClick={handleCancelDelete}
+                className='p-1 rounded hover:bg-zinc-800 text-zinc-400'
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleDeleteClick}
+              className='p-1 rounded hover:bg-zinc-800 text-red-400'
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
         <div ref={setNodeRef} className='flex-1 overflow-y-auto min-h-[40px]'>

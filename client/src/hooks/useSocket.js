@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { socket } from '../lib/socket'
 import { useChatStore } from '../store/chatStore'
 import { useActivityStore } from '../store/activityStore'
+import { useDragStore } from '../store/dragStore'
 
 export function useSocket () {
   const queryClient = useQueryClient()
@@ -10,6 +11,8 @@ export function useSocket () {
   const incrementUnread = useChatStore(s => s.incrementUnread)
   const setTyping = useChatStore(s => s.setTyping)
   const addLog = useActivityStore(s => s.addLog)
+  const setDragging = useDragStore(s => s.setDragging)
+  const clearDragging = useDragStore(s => s.clearDragging)
 
   useEffect(() => {
     const onCardCreated = card => {
@@ -21,8 +24,17 @@ export function useSocket () {
       })
     }
 
+    const onDragStart = ({ cardId, userId, userName }) => {
+      setDragging(cardId, userId, userName)
+    }
+    const onDragEnd = ({ cardId }) => {
+      clearDragging(cardId)
+    }
+
     const onCardUpdated = card => {
       console.log('RECEIVED card:updated', card)
+      clearDragging(card._id)
+
       queryClient.setQueryData(['cards'], old => {
         if (!old?.cards) return old
         return {
@@ -89,6 +101,8 @@ export function useSocket () {
     socket.on('list:updated', onListUpdated)
     socket.on('list:deleted', onListDeleted)
     socket.on('chat:message', onChatMessage)
+    socket.on('card:drag-start', onDragStart)
+    socket.on('card:drag-end', onDragEnd)
     socket.on('chat:typing', onChatTyping)
     socket.on('activity:new', onActivityNew)
 
@@ -100,6 +114,8 @@ export function useSocket () {
       socket.off('list:updated', onListUpdated)
       socket.off('list:deleted', onListDeleted)
       socket.off('chat:message', onChatMessage)
+      socket.off('card:drag-start', onDragStart)
+      socket.off('card:drag-end', onDragEnd)
       socket.off('chat:typing', onChatTyping)
       socket.off('activity:new', onActivityNew)
     }

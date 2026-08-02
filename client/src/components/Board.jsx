@@ -7,6 +7,7 @@ import AddListDialog from './AddListDialog'
 import AddCardDialog from './AddCardDialog'
 import EditCardDialog from './EditCardDialog'
 import KanbanCard from './KanbanCard'
+import { socket } from '../lib/socket'
 import { Plus } from 'lucide-react'
 import { useLists, useCreateList } from '../hooks/useLists'
 import { useCards, useCreateCard, useUpdateCard } from '../hooks/useCards'
@@ -78,20 +79,30 @@ export default function Board () {
   const handleDragStart = event => {
     const card = cards.find(c => c._id === event.active.id)
     setActiveCard(card || null)
+    if (card) {
+      socket.emit('card:drag-start', { cardId: card._id })
+    }
+  }
+
+  const finishDrag = cardId => {
+    if (cardId) socket.emit('card:drag-end', { cardId })
+    setActiveCard(null)
   }
 
   const handleDragEnd = event => {
     const { active, over } = event
-    setActiveCard(null)
+    finishDrag(active.id)
     if (!over) return
 
     const activeCard = cards.find(c => c._id === active.id)
     if (!activeCard) return
 
-    // Dropped over a card -> take that card's list, dropped over empty list area -> over.id is the list id
+    // A card target belongs to its card's list; a list target provides its id.
     const overType = over.data.current?.type
     const targetListId =
-      overType === 'card' ? over.data.current.card.list : over.id
+      overType === 'card'
+        ? over.data.current.card.list
+        : over.data.current?.listId
 
     if (!targetListId) return
 
@@ -159,6 +170,7 @@ export default function Board () {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={({ active }) => finishDrag(active.id)}
       >
         <div className='flex gap-4 p-6 overflow-x-auto'>
           {lists.map(list => (

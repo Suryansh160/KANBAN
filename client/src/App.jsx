@@ -1,37 +1,47 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import Board from './components/Board'
 import AuthDialog from './components/AuthDialog'
 import { AUTH_REQUIRED_EVENT } from './lib/authEvents'
 import { connectSocket, disconnectSocket } from './lib/socket'
 
 export default function App () {
-  const [authOpen, setAuthOpen] = useState(!localStorage.getItem('accessToken'))
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    Boolean(localStorage.getItem('accessToken'))
+  )
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (localStorage.getItem('accessToken')) {
-      connectSocket()
-    }
-
     const handler = () => {
-      setAuthOpen(true)
+      setIsAuthenticated(false)
       disconnectSocket()
+      queryClient.removeQueries({ queryKey: ['lists'] })
+      queryClient.removeQueries({ queryKey: ['cards'] })
+      queryClient.removeQueries({ queryKey: ['activity'] })
     }
     window.addEventListener(AUTH_REQUIRED_EVENT, handler)
     return () => window.removeEventListener(AUTH_REQUIRED_EVENT, handler)
-  }, [])
+  }, [queryClient])
+
+  useEffect(() => {
+    if (isAuthenticated) connectSocket()
+
+    return () => disconnectSocket()
+  }, [isAuthenticated])
 
   const handleSuccess = () => {
-    setAuthOpen(false)
-    connectSocket()
+    // The token is stored by AuthDialog before this callback runs. Mounting the
+    // board now ensures its initial requests include that token.
+    setIsAuthenticated(true)
   }
 
   return (
     <>
-      <Board />
+      {isAuthenticated && <Board />}
       <AuthDialog
-        open={authOpen}
+        open={!isAuthenticated}
         forced
-        onOpenChange={setAuthOpen}
+        onOpenChange={() => {}}
         onSuccess={handleSuccess}
       />
     </>
