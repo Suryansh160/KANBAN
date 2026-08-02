@@ -1,6 +1,10 @@
 import { io } from 'socket.io-client'
 
-export const socket = io('http://localhost:4000', {
+const socketURL =
+  import.meta.env.VITE_SOCKET_URL ||
+  'https://kanban-muew.onrender.com'
+
+export const socket = io(socketURL, {
   autoConnect: false,
   auth: {
     token: localStorage.getItem('accessToken')

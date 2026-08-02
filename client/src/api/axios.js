@@ -2,7 +2,7 @@ import axios from 'axios'
 import { triggerAuthRequired } from '../lib/authEvents'
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api'
+  baseURL: 'https://kanban-muew.onrender.com/api'
 })
 
 api.interceptors.request.use(config => {
